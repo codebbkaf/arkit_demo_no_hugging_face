@@ -1,0 +1,201 @@
+{
+  "project": "ARKitDemo",
+  "branchName": "ralph/arkit-point-cloud-scanner",
+  "description": "ARKit 點雲掃描器 - 偵測裝置硬體、以四種模式把真實物體掃描成 x y z 點雲，並在 app 內以 Metal 繪製供旋轉縮放",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "專案基礎設定",
+      "description": "身為開發者，我需要版本控制、相機權限與可重複的編譯指令，後續 story 才能逐一驗證。",
+      "acceptanceCriteria": [
+        "git init 並加入 .gitignore（xcuserdata、DerivedData、build）",
+        "build settings 加入 INFOPLIST_KEY_NSCameraUsageDescription（繁體中文）",
+        "scripts/build.sh 以 DEVELOPER_DIR 指定 Xcode 27.1 對 generic iOS device 不簽章編譯",
+        "Typecheck passes（scripts/build.sh 成功）"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "改以 MTLDevice.makeLibrary(source:) 執行時編譯 shader，因為這台機器的 Xcode 沒有 Metal Toolchain。"
+    },
+    {
+      "id": "US-002",
+      "title": "點雲資料模型、體素去重與 PLY 編碼",
+      "description": "身為開發者，我需要與感測器無關的點雲儲存結構，所有掃描模式都寫入同一處。",
+      "acceptanceCriteria": [
+        "PointVertex 含 x y z（Float，公尺）與 RGBA（UInt8），stride 16 bytes",
+        "PointCloudStore 以 3 mm 體素去重，上限 2,000,000 點，執行緒安全",
+        "提供點數、邊界框、清除、快照",
+        "PLYExporter 輸出 binary little-endian PLY，欄位 x y z red green blue",
+        "Typecheck passes（scripts/build.sh 成功）"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "硬體偵測首頁",
+      "description": "身為使用者，我想在首頁看到這支裝置有哪些硬體、每種掃描模式能做到什麼，然後自己選。",
+      "acceptanceCriteria": [
+        "顯示裝置型號名稱（無對應時顯示機型識別碼）",
+        "顯示 LiDAR、TrueDepth、ARKit world tracking 是否可用",
+        "四張模式卡片含深度來源、精度、適用物體",
+        "不可用模式為停用外觀並顯示原因",
+        "點選可用模式進入掃描畫面",
+        "介面為繁體中文",
+        "Typecheck passes（scripts/build.sh 成功）",
+        "在模擬器或實機目視確認首頁"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "已在 iPhone 17 模擬器確認首頁（模擬器上所有模式皆為停用）。實機的偵測結果尚未確認。"
+    },
+    {
+      "id": "US-004",
+      "title": "Metal 點雲檢視器",
+      "description": "身為使用者，我想旋轉、縮放、平移掃描出來的點雲模型。",
+      "acceptanceCriteria": [
+        "以 Metal point primitive 繪製 PointCloudStore，黑色背景",
+        "模型自動置中並縮放到適合畫面",
+        "單指拖曳旋轉、捏合縮放、雙指拖曳平移、雙擊重置",
+        "可切換真實色與高度色",
+        "點大小滑桿 1–12",
+        "Typecheck passes（scripts/build.sh 成功）",
+        "在模擬器或實機目視確認檢視器"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "已在模擬器以示範點雲確認繪製與自動置中。手勢尚未實測。"
+    },
+    {
+      "id": "US-005",
+      "title": "掃描畫面與 TrueDepth 模式",
+      "description": "身為 iPhone 17 使用者，我想用前置 TrueDepth 掃描小物體的表面凹凸。",
+      "acceptanceCriteria": [
+        "ARFaceTrackingConfiguration，支援時開啟 isWorldTrackingEnabled",
+        "capturedDepthData 反投影並以相機姿態轉為世界座標，顏色取自 capturedImage",
+        "開始／停止／清除按鈕，掃描中持續累積",
+        "相機畫面上即時疊加已累積的點",
+        "最遠距離滑桿 0.2–1.0 m，預設 0.6 m",
+        "大字顯示點數，每 5 萬點震動，達上限提示",
+        "追蹤不正常時顯示提示且不累積",
+        "Typecheck passes（scripts/build.sh 成功）",
+        "實機確認能掃出物體表面"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "累積式掃描已由 US-010 的固定視角單次拍攝取代。仍需實機確認：無人臉時是否有 capturedDepthData、前鏡頭疊加是否對齊。"
+    },
+    {
+      "id": "US-006",
+      "title": "LiDAR 模式",
+      "description": "身為有 LiDAR 裝置的使用者，我想用後置 LiDAR 繞著物體掃描。",
+      "acceptanceCriteria": [
+        "ARWorldTrackingConfiguration 使用 sceneDepth",
+        "只保留信心值 high 的像素",
+        "最遠距離滑桿 0.5–3.0 m，預設 1.5 m",
+        "與 TrueDepth 模式共用掃描畫面",
+        "Typecheck passes（scripts/build.sh 成功）"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "編譯通過；手邊沒有 LiDAR 裝置，未實測。"
+    },
+    {
+      "id": "US-007",
+      "title": "後置特徵點模式",
+      "description": "身為任何裝置的使用者，我想用後置相機掃出物體的稀疏輪廓。",
+      "acceptanceCriteria": [
+        "累積每幀 rawFeaturePoints",
+        "投影回 capturedImage 取顏色",
+        "套用距離滑桿",
+        "介面標示稀疏、僅輪廓",
+        "Typecheck passes（scripts/build.sh 成功）"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "編譯通過；未實機測試。"
+    },
+    {
+      "id": "US-008",
+      "title": "統計與 PLY 匯出",
+      "description": "身為使用者，我想看到點雲的座標資訊，並把 x y z 資料帶到其他軟體。",
+      "acceptanceCriteria": [
+        "檢視器顯示點數與邊界尺寸（公分）",
+        "匯出 PLY 經系統分享選單輸出，檔名含時間戳",
+        "Typecheck passes（scripts/build.sh 成功）"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "編譯通過；匯出流程未實測。"
+    },
+    {
+      "id": "US-009",
+      "title": "後置 ML 估計深度模式（實驗性）",
+      "description": "身為沒有 LiDAR 的使用者，我想用後置相機得到密集點雲，即使深度是估計值。",
+      "acceptanceCriteria": [
+        "專案內建 Depth Anything V2 Small Core ML 模型",
+        "對 capturedImage 背景推論，同時最多一幀",
+        "以 ARKit 特徵點最小平方校正為公尺深度，特徵點少於 12 個或擬合不合理的幀捨棄",
+        "介面標示實驗性／估計深度",
+        "Typecheck passes（scripts/build.sh 成功）"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "編譯通過，模型已編入 app bundle；未實機測試。"
+    },
+    {
+      "id": "US-010",
+      "title": "固定視角單次拍攝",
+      "description": "身為使用者，我想把手機固定在一個角度拍一次，就得到物體看得到那一面的 x y z 點雲，不需要繞著物體移動。",
+      "acceptanceCriteria": [
+        "拍攝前即時預覽：每幀以目前深度範圍內的點取代點雲並疊加在相機畫面上",
+        "按「拍攝」後收集多幀深度（TrueDepth 10 幀、LiDAR 15 幀）逐像素平均，變動超過 4% 的像素捨棄",
+        "以全解析度反投影，不做體素去重",
+        "拍攝期間相機移動超過 1 cm 或 1.5° 時放棄並提示重拍",
+        "拍攝完成後自動開啟檢視器，初始視角接近拍攝方向；返回後可重拍",
+        "特徵點模式收集約 30 幀；ML 模式拍單幀",
+        "Typecheck passes（scripts/build.sh 成功）",
+        "實機確認能拍出物體表面"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "程式已完成且編譯通過；需實機驗證。"
+    },
+    {
+      "id": "US-011",
+      "title": "只掃描準星對到的物體",
+      "description": "身為使用者，我只想掃描某一個物體，不要把桌面和背景一起掃進來。",
+      "acceptanceCriteria": [
+        "以 Vision 前景主體分割（VNGenerateForegroundInstanceMaskRequest）取得物體遮罩",
+        "選擇畫面中央準星對到的物體；中央為背景時取最近的物體",
+        "只有遮罩內的深度像素會轉成點，四種模式皆適用",
+        "預覽時即時顯示隔離後的結果；找不到物體時顯示全部的點並提示",
+        "拍攝時找不到物體則放棄並提示重拍",
+        "提供「只保留準星對到的物體」開關，預設開啟",
+        "Typecheck passes（scripts/build.sh 成功）",
+        "實機確認桌面被去除"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "程式已完成且編譯通過；需實機驗證。ARKit 的 ARReferenceObject 只能辨識事先建檔的物體，故改用 Vision 主體分割。"
+    },
+    {
+      "id": "US-012",
+      "title": "LiDAR 高解析深度與高密度點雲",
+      "description": "身為使用者，我想讓 LiDAR 模式輸出感測器能提供的最高深度解析度，並讓拍到的物體有更密的點。",
+      "acceptanceCriteria": [
+        "LiDAR 模式優先以 AVFoundation builtInLiDARDepthCamera 取得深度，選擇深度解析度最高的格式（預期 768×576，為 ARKit sceneDepth 256×192 的 9 倍像素）",
+        "LiDAR 深度相機不可用時退回 ARKit sceneDepth",
+        "以 CoreMotion 重力方向讓點雲 y 軸朝上",
+        "掃描畫面以相機內參自行計算背景與點的對齊",
+        "所有深度模式拍攝時在相鄰量測值之間雙線性內插補點（每軸最多 4 倍），不跨越物體邊緣，總數不超過 2,000,000",
+        "Typecheck passes（scripts/build.sh 成功）",
+        "實機確認點數與對齊"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "程式已完成且編譯通過；需在有 LiDAR 的裝置上驗證，特別是直向時背景與點的方向是否正確。"
+    }
+  ]
+}

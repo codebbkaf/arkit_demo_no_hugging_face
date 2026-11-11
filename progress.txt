@@ -1,0 +1,8 @@
+# Ralph Progress Log - ralph/arkit-point-cloud-scanner
+
+## Codebase Patterns
+- 編譯：scripts/build.sh [device|sim]（xcode-select 指向 CommandLineTools，腳本內以 DEVELOPER_DIR 指定 Xcode 27.1）
+- 專案預設 MainActor 隔離；非 UI 型別（Model/、Scanning/）要標 nonisolated
+- Shader 寫在 Rendering/ShaderSource.swift 字串中於執行時編譯；編譯錯誤只會在執行時以 print 出現，改完要在模擬器跑過
+- 模擬器檢查檢視器：simctl launch <device> <bundle id> -demoViewer
+- ARKit 無法在模擬器執行；US-005 需實機驗證後才可標為 passes
